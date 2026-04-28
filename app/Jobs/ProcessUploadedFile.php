@@ -6,14 +6,17 @@ use App\Models\ProjectFile;
 use App\Support\FrameworkBridge;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProcessUploadedFile implements ShouldQueue
 {
-    use InteractsWithQueue, Queueable;
+    use Queueable;
 
     public int $timeout = 300;
+
     public int $tries = 2;
 
     public function __construct(
@@ -23,6 +26,8 @@ class ProcessUploadedFile implements ShouldQueue
 
     public function handle(FrameworkBridge $bridge): void
     {
+        Log::info('ProcessUploadedFile started', ['file_id' => $this->file->id, 'format' => $this->file->file_format]);
+
         $this->file->update(['status' => 'processing']);
 
         try {
@@ -30,7 +35,6 @@ class ProcessUploadedFile implements ShouldQueue
             $filter = $bridge->makeFileFilter($this->file->file_format);
             $segEngine = $bridge->makeSegmentationEngine();
 
-            // extract → segment → persist segments → store skeleton
             $result = $filter->extract($sourceContents);
             $document = $result->document;
             $skeletonBytes = $result->skeleton;
@@ -45,7 +49,7 @@ class ProcessUploadedFile implements ShouldQueue
             foreach ($document->getSegmentPairs() as $i => $pair) {
                 $wordCount += str_word_count($pair->getSourceText());
                 $segments[] = [
-                    'id' => (string) \Illuminate\Support\Str::orderedUuid(),
+                    'id' => (string) Str::orderedUuid(),
                     'file_id' => $this->file->id,
                     'project_id' => $this->file->project_id,
                     'segment_number' => $i + 1,
@@ -60,7 +64,7 @@ class ProcessUploadedFile implements ShouldQueue
                 ];
             }
 
-            \Illuminate\Support\Facades\DB::table('segments')->insert($segments);
+            DB::table('segments')->insert($segments);
 
             $this->file->update([
                 'skeleton_path' => $skeletonPath,
@@ -70,10 +74,18 @@ class ProcessUploadedFile implements ShouldQueue
                 'processed_at' => now(),
             ]);
 
+            Log::info('ProcessUploadedFile completed', [
+                'file_id' => $this->file->id,
+                'segment_count' => count($segments),
+                'word_count' => $wordCount,
+            ]);
+
             if ($this->options['mtPrefill'] ?? false) {
                 dispatch(new PopulateMtSuggestions($this->file));
             }
         } catch (\Throwable $e) {
+            Log::error('ProcessUploadedFile failed', ['file_id' => $this->file->id, 'error' => $e->getMessage()]);
+
             $this->file->update(['status' => 'error', 'error_message' => $e->getMessage()]);
             throw $e;
         }
