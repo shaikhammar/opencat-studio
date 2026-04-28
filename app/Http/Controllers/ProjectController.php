@@ -51,13 +51,27 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project): Response
     {
-        $project->load(['files', 'translationMemories', 'glossaries']);
+        $files = $project->files()->orderBy('created_at')->get();
+
+        $totalSegments  = $files->sum('segment_count');
+        $translated     = $files->sum('translated_count');
+        $hasProcessing  = $files->contains(fn ($f) => in_array($f->status, ['pending', 'processing']));
+
+        $nextStep = match (true) {
+            $hasProcessing                                          => 'processing',
+            $files->isEmpty()                                      => 'no_files',
+            $totalSegments > 0 && $translated === $totalSegments   => 'complete',
+            $totalSegments > 0 && $translated === 0                => 'translate',
+            default                                                => 'translating',
+        };
 
         return Inertia::render('projects/show', [
-            'project' => $project,
-            'files' => $project->files,
-            'tm' => $project->projectTm,
-            'glossary' => $project->projectGlossary,
+            'project'   => $project,
+            'files'     => $files,
+            'tm'        => $project->projectTm,
+            'glossary'  => $project->projectGlossary,
+            'nextStep'  => $nextStep,
+            'isPolling' => $hasProcessing,
         ]);
     }
 
