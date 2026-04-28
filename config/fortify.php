@@ -143,15 +143,11 @@ return [
     |
     */
 
+    // 2FA removed — V1 is single-user with email+password only
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-            // 'window' => 0
-        ]),
     ],
 
 ];

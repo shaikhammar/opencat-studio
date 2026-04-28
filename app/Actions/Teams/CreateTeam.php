@@ -2,30 +2,31 @@
 
 namespace App\Actions\Teams;
 
-use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CreateTeam
 {
-    /**
-     * Create a new team and add the user as owner.
-     */
-    public function handle(User $user, string $name, bool $isPersonal = false): Team
+    public function handle(User $user, string $name): Team
     {
-        return DB::transaction(function () use ($user, $name, $isPersonal) {
+        return DB::transaction(function () use ($user, $name) {
             $team = Team::create([
                 'name' => $name,
-                'is_personal' => $isPersonal,
+                'slug' => Str::slug($name) ?: Str::lower(Str::random(8)),
+                'plan' => 'free',
+                'owner_id' => $user->id,
             ]);
 
-            $membership = $team->memberships()->create([
+            DB::table('team_user')->insert([
+                'team_id' => $team->id,
                 'user_id' => $user->id,
-                'role' => TeamRole::Owner,
+                'role' => 'translator',
+                'created_at' => now(),
             ]);
 
-            $user->switchTeam($team);
+            $user->update(['team_id' => $team->id]);
 
             return $team;
         });

@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 // ── Auth (Fortify handles login/register/password reset) ──────────
 Route::inertia('/', 'welcome')->name('home');
 
+// Block /register once the single user account exists (D-S1)
+Route::middleware('registration.enabled')->group(function () {
+    Route::inertia('/register', 'auth/register')->name('register');
+});
+
 // ── Authenticated routes ──────────────────────────────────────────
 Route::middleware(['auth', 'verified'])->group(function () {
 
