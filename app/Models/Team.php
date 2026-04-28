@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Team extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'plan', 'owner_id'];
+    protected $fillable = ['name', 'slug', 'plan', 'owner_id', 'is_personal'];
 
     protected static function boot(): void
     {
@@ -37,6 +38,23 @@ class Team extends Model
         return $this->belongsToMany(User::class, 'team_user')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'team_user')
+            ->using(TeamMemberPivot::class)
+            ->withPivot('role');
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(Membership::class, 'team_id');
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TeamInvitation::class);
     }
 
     public function projects(): HasMany

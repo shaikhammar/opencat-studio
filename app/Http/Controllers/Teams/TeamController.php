@@ -68,7 +68,7 @@ class TeamController extends Controller
                 ->whereNull('accepted_at')
                 ->get()
                 ->map(fn ($invitation) => [
-                    'code' => $invitation->code,
+                    'code' => $invitation->id,
                     'email' => $invitation->email,
                     'role' => $invitation->role->value,
                     'role_label' => $invitation->role->label(),
@@ -122,7 +122,7 @@ class TeamController extends Controller
             : null;
 
         DB::transaction(function () use ($user, $team) {
-            User::where('current_team_id', $team->id)
+            User::where('team_id', $team->id)
                 ->where('id', '!=', $user->id)
                 ->each(fn (User $affectedUser) => $affectedUser->switchTeam($affectedUser->personalTeam()));
 
