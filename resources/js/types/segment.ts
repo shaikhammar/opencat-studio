@@ -10,32 +10,32 @@ export interface TagMap {
     id: number;
     type: 'open' | 'close' | 'self';
     data: string;
-    displayText: string;
+    display_text: string;
 }
 
 export interface Segment {
     id: string;
-    segmentNumber: number;
-    sourceText: string;
-    targetText: string | null;
-    sourceTags: TagMap[];
-    targetTags: TagMap[];
+    segment_number: number;
+    source_text: string;
+    target_text: string | null;
+    source_tags: TagMap[];
+    target_tags: TagMap[];
     status: SegmentStatus;
-    wordCount: number;
-    charCount: number;
-    tmMatchPercent: number | null;
-    tmMatchOrigin: 'tm' | 'mt' | 'human' | 'exact' | null;
+    word_count: number;
+    char_count: number;
+    tm_match_percent: number | null;
+    tm_match_origin: 'tm' | 'mt' | 'human' | 'exact' | null;
     note: string | null;
     locked: boolean;
     bookmarked: boolean;
 }
 
 export interface TmMatch {
-    sourceText: string;
-    targetText: string;
+    source_text: string;
+    target_text: string;
     percent: number;
     origin: 'tm' | 'mt' | 'exact';
-    diffTokens: DiffToken[];
+    diff_tokens: DiffToken[];
 }
 
 export interface DiffToken {
@@ -44,10 +44,10 @@ export interface DiffToken {
 }
 
 export interface QaIssue {
-    segmentId: string;
-    segmentNumber: number;
+    segment_id: string;
+    segment_number: number;
     severity: 'error' | 'warning' | 'info';
-    checkName: string;
+    check_name: string;
     message: string;
 }
 
