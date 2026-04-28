@@ -7,11 +7,11 @@ use App\Models\TranslationMemory;
 use App\Services\TmService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Log;
 
 class WriteTmEntryJob implements ShouldQueue
 {
-    use InteractsWithQueue, Queueable;
+    use Queueable;
 
     public string $queue = 'critical';
 
@@ -22,6 +22,8 @@ class WriteTmEntryJob implements ShouldQueue
 
     public function handle(TmService $tmService): void
     {
+        Log::info('WriteTmEntryJob started', ['segment_id' => $this->segment->id, 'tm_id' => $this->tm->id]);
+
         $project = $this->segment->project;
 
         $tmService->addEntry(
@@ -31,5 +33,7 @@ class WriteTmEntryJob implements ShouldQueue
             $project->target_lang,
             $this->tm,
         );
+
+        Log::info('WriteTmEntryJob completed', ['segment_id' => $this->segment->id, 'tm_id' => $this->tm->id]);
     }
 }
