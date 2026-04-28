@@ -14,16 +14,8 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
 
-    public function __construct(private CreateTeam $createTeam)
-    {
-        //
-    }
+    public function __construct(private CreateTeam $createTeam) {}
 
-    /**
-     * Validate and create a newly registered user.
-     *
-     * @param  array<string, string>  $input
-     */
     public function create(array $input): User
     {
         Validator::make($input, [
@@ -38,7 +30,11 @@ class CreateNewUser implements CreatesNewUsers
                 'password' => $input['password'],
             ]);
 
-            $this->createTeam->handle($user, $user->name."'s Team", isPersonal: true);
+            // Bootstrap the user's personal workspace (single team in V1)
+            $this->createTeam->handle($user, 'My Workspace');
+
+            // Assign translator role — role checks are in place so V2 needs no auth refactor
+            $user->assignRole('translator');
 
             return $user;
         });
