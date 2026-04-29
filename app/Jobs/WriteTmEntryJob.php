@@ -13,12 +13,12 @@ class WriteTmEntryJob implements ShouldQueue
 {
     use Queueable;
 
-    public string $queue = 'critical';
-
     public function __construct(
         public readonly Segment $segment,
         public readonly TranslationMemory $tm,
-    ) {}
+    ) {
+        $this->onQueue('critical');
+    }
 
     public function handle(TmService $tmService): void
     {

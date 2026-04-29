@@ -17,11 +17,11 @@ class GlossaryFactory extends Factory
         return [
             'team_id' => Team::factory(),
             'project_id' => null,
-            'name' => fake()->words(2, true) . ' Glossary',
+            'name' => fake()->words(2, true).' Glossary',
             'source_lang' => 'en',
             'target_lang' => 'fr',
             'term_count' => 0,
-            'sqlite_path' => 'glossaries/' . fake()->uuid() . '.sqlite',
+            'sqlite_path' => 'glossaries/'.fake()->uuid().'.sqlite',
             'is_global' => false,
         ];
     }
