@@ -2,11 +2,14 @@
 
 namespace Tests;
 
+use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected string $seeder = RolesSeeder::class;
+
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void
     {
         if (! Features::enabled($feature)) {

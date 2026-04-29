@@ -11,7 +11,6 @@ use App\Support\UserTeam;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 
@@ -24,26 +23,8 @@ trait HasTeams
      */
     public function teams(): BelongsToMany
     {
-        return $this->belongsToMany(Team::class, 'team_members', 'user_id', 'team_id')
-            ->withPivot(['role'])
-            ->withTimestamps();
-    }
-
-    /**
-     * Get all of the teams the user owns.
-     *
-     * @return HasManyThrough<Team, Membership, $this>
-     */
-    public function ownedTeams(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            Team::class,
-            Membership::class,
-            'user_id',
-            'id',
-            'id',
-            'team_id',
-        )->where('team_members.role', TeamRole::Owner->value);
+        return $this->belongsToMany(Team::class, 'team_user', 'user_id', 'team_id')
+            ->withPivot(['role']);
     }
 
     /**
@@ -63,7 +44,7 @@ trait HasTeams
      */
     public function currentTeam(): BelongsTo
     {
-        return $this->belongsTo(Team::class, 'current_team_id');
+        return $this->belongsTo(Team::class, 'team_id');
     }
 
     /**
@@ -72,7 +53,7 @@ trait HasTeams
     public function personalTeam(): ?Team
     {
         return $this->teams()
-            ->where('is_personal', true)
+            ->where('teams.is_personal', true)
             ->first();
     }
 
@@ -85,7 +66,7 @@ trait HasTeams
             return false;
         }
 
-        $this->update(['current_team_id' => $team->id]);
+        $this->update(['team_id' => $team->id]);
         $this->setRelation('currentTeam', $team);
 
         URL::defaults(['current_team' => $team->slug]);
@@ -106,7 +87,7 @@ trait HasTeams
      */
     public function isCurrentTeam(Team $team): bool
     {
-        return $this->current_team_id === $team->id;
+        return $this->team_id === $team->id;
     }
 
     /**
