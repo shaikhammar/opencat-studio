@@ -298,6 +298,26 @@ test('users cannot switch to team they dont belong to', function () {
     $response->assertForbidden();
 });
 
+test('creating a team assigns the owner role to the creator', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('teams.store'), ['name' => 'My Team']);
+
+    $team = Team::where('name', 'My Team')->firstOrFail();
+
+    $this->assertDatabaseHas('team_user', [
+        'user_id' => $user->id,
+        'team_id' => $team->id,
+        'role' => TeamRole::Owner->value,
+    ]);
+});
+
+test('the team settings page renders without a role enum error', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('teams.edit', $user->currentTeam))->assertOk();
+});
+
 test('guests cannot access teams', function () {
     $response = $this->get(route('teams.index'));
 

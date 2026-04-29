@@ -5,6 +5,7 @@ use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\Segment;
 use App\Models\TranslationMemory;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Facades\Queue;
 
 test('segments can be listed for a file', function () {
@@ -103,6 +104,28 @@ test('saving a translation dispatches tm write when project tm exists', function
     ]);
 
     Queue::assertPushed(WriteTmEntryJob::class);
+});
+
+test('segment update succeeds even when tm dispatch fails', function () {
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    TranslationMemory::factory()->forProject($project)->create();
+    $file = ProjectFile::factory()->create(['project_id' => $project->id, 'user_id' => $user->id]);
+    $segment = Segment::factory()->create(['file_id' => $file->id, 'project_id' => $project->id, 'segment_number' => 1]);
+
+    $this->mock(Dispatcher::class)
+        ->shouldReceive('dispatch')
+        ->andThrow(new RuntimeException('Redis connection refused'));
+
+    $this->patchJson("/api/projects/{$project->id}/files/{$file->id}/segments/{$segment->id}", [
+        'target_text' => 'Translated',
+        'status' => 'translated',
+    ])->assertOk();
+
+    $this->assertDatabaseHas('segments', [
+        'id' => $segment->id,
+        'target_text' => 'Translated',
+    ]);
 });
 
 test('guests cannot access segment api', function () {

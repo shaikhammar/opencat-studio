@@ -6,7 +6,6 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\GlossaryController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\QaController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TmController;
 use Illuminate\Support\Facades\Route;
@@ -34,7 +33,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Files
     Route::post('/projects/{project}/files', [FileController::class, 'store'])->name('files.store')->can('update', 'project');
     Route::delete('/projects/{project}/files/{file}', [FileController::class, 'destroy'])->name('files.destroy')->can('update', 'project');
-    Route::get('/projects/{project}/files/{file}/status', [FileController::class, 'status'])->name('files.status');
 
     // Editor
     Route::get('/projects/{project}/files/{file}/editor', [EditorController::class, 'show'])->name('editor.show')->can('view', 'project');

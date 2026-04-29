@@ -13,8 +13,12 @@ class QaRunController extends Controller
 {
     public function store(Project $project, ProjectFile $file): JsonResponse
     {
-        Cache::put("qa_status_{$file->id}", 'pending', 3600);
-        dispatch(new RunQaOnFile($file));
+        try {
+            Cache::put("qa_status_{$file->id}", 'pending', 3600);
+            dispatch(new RunQaOnFile($file));
+        } catch (\Throwable) {
+            return response()->json(['error' => 'Queue service is unavailable. Please try again later.'], 503);
+        }
 
         return response()->json(['status' => 'queued']);
     }

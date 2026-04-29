@@ -4,6 +4,7 @@ use App\Jobs\ImportTmxJob;
 use App\Models\Project;
 use App\Models\TranslationMemory;
 use App\Models\User;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -87,4 +88,77 @@ test('global tm page renders', function () {
     ]);
 
     $this->get(route('tm.global'))->assertOk();
+});
+
+test('tm import redirects with error when queue is unavailable', function () {
+    Storage::fake();
+
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+
+    $this->mock(Dispatcher::class)
+        ->shouldReceive('dispatch')
+        ->andThrow(new RuntimeException('Redis connection refused'));
+
+    $file = UploadedFile::fake()->create('file.tmx', 10, 'text/xml');
+
+    $this->post(route('tm.import', $project), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHasErrors('queue');
+});
+
+test('global tm import redirects with error when queue is unavailable', function () {
+    Storage::fake();
+
+    $user = actingAsUser();
+    TranslationMemory::factory()->global()->create(['team_id' => $user->team_id]);
+
+    $this->mock(Dispatcher::class)
+        ->shouldReceive('dispatch')
+        ->andThrow(new RuntimeException('Redis connection refused'));
+
+    $file = UploadedFile::fake()->create('file.tmx', 10, 'text/xml');
+
+    $this->post(route('tm.global.import'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHasErrors('queue');
+});
+
+test('tm export downloads a tmx file', function () {
+    Storage::fake();
+
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    $tm = TranslationMemory::factory()->forProject($project)->create();
+
+    DB::table('tm_units')->insert([
+        'tm_id' => $tm->id,
+        'source_lang' => 'en',
+        'target_lang' => 'fr',
+        'source_text' => 'Hello world',
+        'target_text' => 'Bonjour le monde',
+        'source_segment' => 'Hello world',
+        'target_segment' => 'Bonjour le monde',
+        'source_text_normalized' => 'hello world',
+        'created_at' => now(),
+    ]);
+
+    $response = $this->get(route('tm.export', $project));
+
+    $response->assertOk();
+    $response->assertDownload('tm_export.tmx');
+    expect($response->streamedContent())->toContain('<tmx')->toContain('Hello world')->toContain('Bonjour le monde');
+});
+
+test('tm export returns empty tmx when no entries', function () {
+    Storage::fake();
+
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    TranslationMemory::factory()->forProject($project)->create();
+
+    $response = $this->get(route('tm.export', $project));
+
+    $response->assertOk();
+    $response->assertDownload('tm_export.tmx');
 });
