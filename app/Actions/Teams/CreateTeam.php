@@ -2,6 +2,7 @@
 
 namespace App\Actions\Teams;
 
+use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class CreateTeam
             DB::table('team_user')->insert([
                 'team_id' => $team->id,
                 'user_id' => $user->id,
-                'role' => 'translator',
+                'role' => TeamRole::Owner->value,
                 'created_at' => now(),
             ]);
 

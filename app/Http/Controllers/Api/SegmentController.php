@@ -11,6 +11,7 @@ use App\Models\Segment;
 use App\Services\EditorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SegmentController extends Controller
 {
@@ -53,7 +54,14 @@ class SegmentController extends Controller
         );
 
         if ($updated->isTranslated() && $project->projectTm) {
-            dispatch(new WriteTmEntryJob($updated, $project->projectTm));
+            try {
+                dispatch(new WriteTmEntryJob($updated, $project->projectTm));
+            } catch (\Throwable $e) {
+                Log::warning('Failed to queue TM entry write', [
+                    'segment_id' => $updated->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json($updated);

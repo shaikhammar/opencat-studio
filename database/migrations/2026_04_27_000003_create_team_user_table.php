@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('team_id')->index();
             $table->uuid('user_id')->index();
-            $table->string('role', 50)->default('translator');
+            $table->string('role', 50)->default('member');
             $table->timestamp('created_at')->useCurrent();
 
             $table->unique(['team_id', 'user_id']);

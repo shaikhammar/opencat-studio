@@ -16,7 +16,8 @@ class StoreFileRequest extends FormRequest
         $formats = implode(',', config('catframework.file_processing.supported_formats'));
 
         return [
-            'file' => "required|file|max:51200|mimes:{$formats}",
+            'files' => 'required|array|min:1',
+            'files.*' => "required|file|max:51200|mimes:{$formats}",
             'mt_prefill' => 'boolean',
         ];
     }

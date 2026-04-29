@@ -24,6 +24,14 @@ class ProcessUploadedFile implements ShouldQueue
         public readonly array $options = [],
     ) {}
 
+    public function failed(\Throwable $e): void
+    {
+        $this->file->update([
+            'status' => 'error',
+            'error_message' => $e->getMessage(),
+        ]);
+    }
+
     public function handle(FrameworkBridge $bridge): void
     {
         Log::info('ProcessUploadedFile started', ['file_id' => $this->file->id, 'format' => $this->file->file_format]);

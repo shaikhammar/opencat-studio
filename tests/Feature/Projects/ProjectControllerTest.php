@@ -1,7 +1,11 @@
 <?php
 
 use App\Models\Project;
+use App\Models\ProjectFile;
 use App\Models\User;
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('the project create page can be rendered', function () {
     $user = actingAsUser();
@@ -115,6 +119,103 @@ test('projects cannot be archived by other users', function () {
     $project = Project::factory()->create(['user_id' => $other->id, 'team_id' => $other->team_id]);
 
     $this->delete(route('projects.destroy', $project))->assertForbidden();
+});
+
+test('project creation redirects with queue error when dispatch fails', function () {
+    Storage::fake('local');
+
+    $user = actingAsUser();
+
+    $this->mock(Dispatcher::class)
+        ->shouldReceive('dispatch')
+        ->andThrow(new RuntimeException('Redis connection refused'));
+
+    $file = UploadedFile::fake()->create('document.xlf', 10, 'text/xml');
+
+    $this->post(route('projects.store'), [
+        'name' => 'My Project',
+        'source_lang' => 'en',
+        'target_lang' => 'fr',
+        'files' => [$file],
+    ])
+        ->assertRedirect()
+        ->assertSessionHasErrors('queue');
+
+    $this->assertDatabaseHas('projects', [
+        'user_id' => $user->id,
+        'name' => 'My Project',
+    ]);
+});
+
+test('a pending file stuck for over 2 minutes is marked as error on show', function () {
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    $file = ProjectFile::factory()->create([
+        'project_id' => $project->id,
+        'user_id' => $user->id,
+        'status' => 'pending',
+        'updated_at' => now()->subMinutes(3),
+    ]);
+
+    $this->get(route('projects.show', $project))->assertOk();
+
+    $this->assertDatabaseHas('project_files', [
+        'id' => $file->id,
+        'status' => 'error',
+        'error_message' => 'File processing did not start. Check that the queue worker is running.',
+    ]);
+});
+
+test('a processing file stuck for over 5 minutes is marked as error on show', function () {
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    $file = ProjectFile::factory()->create([
+        'project_id' => $project->id,
+        'user_id' => $user->id,
+        'status' => 'processing',
+        'updated_at' => now()->subMinutes(6),
+    ]);
+
+    $this->get(route('projects.show', $project))->assertOk();
+
+    $this->assertDatabaseHas('project_files', [
+        'id' => $file->id,
+        'status' => 'error',
+        'error_message' => 'File processing timed out. Please try uploading the file again.',
+    ]);
+});
+
+test('a recently pending file is not marked as error', function () {
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    $file = ProjectFile::factory()->create([
+        'project_id' => $project->id,
+        'user_id' => $user->id,
+        'status' => 'pending',
+        'updated_at' => now()->subSeconds(30),
+    ]);
+
+    $this->get(route('projects.show', $project))->assertOk();
+
+    $this->assertDatabaseHas('project_files', [
+        'id' => $file->id,
+        'status' => 'pending',
+    ]);
+});
+
+test('isPolling is false when all files have timed out', function () {
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+    ProjectFile::factory()->create([
+        'project_id' => $project->id,
+        'user_id' => $user->id,
+        'status' => 'pending',
+        'updated_at' => now()->subMinutes(3),
+    ]);
+
+    $this->get(route('projects.show', $project))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('isPolling', false));
 });
 
 test('guests cannot access projects', function () {

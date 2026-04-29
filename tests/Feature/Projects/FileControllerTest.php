@@ -3,6 +3,7 @@
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\User;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -16,10 +17,8 @@ test('files can be uploaded to a project', function () {
 
     $file = UploadedFile::fake()->create('document.xlf', 10, 'text/xml');
 
-    $response = $this->post(route('files.store', $project), ['file' => $file]);
-
-    $response->assertOk();
-    $response->assertJsonStructure(['fileId', 'status']);
+    $this->post(route('files.store', $project), ['files' => [$file]])
+        ->assertRedirect(route('projects.show', $project));
 
     $this->assertDatabaseHas('project_files', [
         'project_id' => $project->id,
@@ -29,18 +28,22 @@ test('files can be uploaded to a project', function () {
     ]);
 });
 
-test('file status can be retrieved', function () {
+test('multiple files can be uploaded at once', function () {
+    Storage::fake('local');
+    Queue::fake();
+
     $user = actingAsUser();
     $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
-    $file = ProjectFile::factory()->processed()->create([
-        'project_id' => $project->id,
-        'user_id' => $user->id,
-    ]);
 
-    $response = $this->get(route('files.status', [$project, $file]));
+    $files = [
+        UploadedFile::fake()->create('first.xlf', 5, 'text/xml'),
+        UploadedFile::fake()->create('second.xlf', 5, 'text/xml'),
+    ];
 
-    $response->assertOk();
-    $response->assertJsonStructure(['id', 'status', 'wordCount', 'segmentCount', 'translatedCount', 'progress']);
+    $this->post(route('files.store', $project), ['files' => $files])
+        ->assertRedirect(route('projects.show', $project));
+
+    expect(ProjectFile::where('project_id', $project->id)->count())->toBe(2);
 });
 
 test('files can be deleted from a project', function () {
@@ -67,4 +70,21 @@ test('other users cannot delete project files', function () {
     ]);
 
     $this->delete(route('files.destroy', [$project, $file]))->assertForbidden();
+});
+
+test('file upload redirects with queue error when dispatch fails', function () {
+    Storage::fake('local');
+
+    $user = actingAsUser();
+    $project = Project::factory()->create(['user_id' => $user->id, 'team_id' => $user->team_id]);
+
+    $this->mock(Dispatcher::class)
+        ->shouldReceive('dispatch')
+        ->andThrow(new RuntimeException('Redis connection refused'));
+
+    $file = UploadedFile::fake()->create('document.xlf', 10, 'text/xml');
+
+    $this->post(route('files.store', $project), ['files' => [$file]])
+        ->assertRedirect()
+        ->assertSessionHasErrors('queue');
 });

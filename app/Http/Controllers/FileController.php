@@ -6,9 +6,7 @@ use App\Http\Requests\StoreFileRequest;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Services\FileProcessingService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class FileController extends Controller
 {
@@ -16,21 +14,28 @@ class FileController extends Controller
         private readonly FileProcessingService $fileProcessingService,
     ) {}
 
-    public function store(StoreFileRequest $request, Project $project): JsonResponse
+    public function store(StoreFileRequest $request, Project $project): RedirectResponse
     {
-        $file = $this->fileProcessingService->accept(
-            $request->file('file'),
-            $project,
-            $request->user(),
-            ['mtPrefill' => (bool) $request->input('mt_prefill', false)],
-        );
+        $queueFailed = false;
 
-        return response()->json(['fileId' => $file->id, 'status' => $file->status]);
-    }
+        foreach ($request->file('files') as $file) {
+            try {
+                $this->fileProcessingService->accept(
+                    $file,
+                    $project,
+                    $request->user(),
+                    ['mtPrefill' => (bool) $request->input('mt_prefill', false)],
+                );
+            } catch (\Throwable) {
+                $queueFailed = true;
+            }
+        }
 
-    public function status(Project $project, ProjectFile $file): JsonResponse
-    {
-        return response()->json($this->fileProcessingService->getStatus($file));
+        $redirect = redirect()->route('projects.show', $project);
+
+        return $queueFailed
+            ? $redirect->withErrors(['queue' => 'Queue service is unavailable. Some files could not be queued for processing.'])
+            : $redirect;
     }
 
     public function destroy(Project $project, ProjectFile $file): RedirectResponse

@@ -8,12 +8,13 @@ use App\Models\ProjectFile;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileProcessingService
 {
     public function accept(UploadedFile $upload, Project $project, User $user, array $options = []): ProjectFile
     {
-        $fileId = (string) \Illuminate\Support\Str::orderedUuid();
+        $fileId = (string) Str::orderedUuid();
         $ext = $upload->getClientOriginalExtension();
         $storagePath = "uploads/{$project->id}/{$fileId}/source.{$ext}";
 
@@ -31,7 +32,12 @@ class FileProcessingService
             'status' => 'pending',
         ]);
 
-        dispatch(new ProcessUploadedFile($file, $options));
+        try {
+            dispatch(new ProcessUploadedFile($file, $options));
+        } catch (\Throwable $e) {
+            $file->update(['status' => 'error', 'error_message' => 'Queue service unavailable.']);
+            throw $e;
+        }
 
         return $file;
     }

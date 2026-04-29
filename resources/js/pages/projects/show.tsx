@@ -97,10 +97,17 @@ function FileStatusCell({ file }: { file: ProjectFile }) {
     }
     if (file.status === 'error') {
         return (
-            <span className="flex items-center gap-1.5 text-red-500" title={file.error_message ?? undefined}>
-                <AlertTriangle className="size-3.5" />
-                Error
-            </span>
+            <div className="space-y-0.5">
+                <span className="flex items-center gap-1.5 text-red-500">
+                    <AlertTriangle className="size-3.5 shrink-0" />
+                    Error
+                </span>
+                {file.error_message && (
+                    <p className="max-w-48 text-xs text-red-400" title={file.error_message}>
+                        {file.error_message}
+                    </p>
+                )}
+            </div>
         );
     }
     const dotColor = file.status === 'ready' ? 'bg-green-500' : 'bg-stone-300';
@@ -156,10 +163,11 @@ function FileTable({ files, project }: { files: ProjectFile[]; project: Project 
                     {files.map((file) => {
                         const canTranslate = file.status === 'ready';
                         const canExport = file.status === 'ready' && file.translated_count > 0;
+                        const isError = file.status === 'error';
                         return (
-                            <tr key={file.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                            <tr key={file.id} className={`border-b border-stone-100 last:border-0 hover:bg-stone-50 ${isError ? 'bg-red-50/40' : ''}`}>
                                 <td className="px-4 py-3">
-                                    <span className="flex items-center gap-2 font-medium text-stone-900">
+                                    <span className={`flex items-center gap-2 font-medium ${isError ? 'text-stone-400' : 'text-stone-900'}`}>
                                         <FileText className="size-4 shrink-0 text-stone-400" />
                                         {file.original_name}
                                     </span>
@@ -232,7 +240,7 @@ function TmSection({ tm, project }: { tm: TranslationMemory | null; project: Pro
                             <Link href={`/projects/${project.id}/tm`}>Search TM</Link>
                         </Button>
                         <Button asChild size="sm" variant="outline" className="h-7 px-3 text-xs">
-                            <Link href={`/projects/${project.id}/tm/import`}>Import TMX</Link>
+                            <Link href={`/projects/${project.id}/tm`}>Import TMX</Link>
                         </Button>
                         <Button asChild size="sm" variant="outline" className="h-7 px-3 text-xs">
                             <Link href={`/projects/${project.id}/tm/export`}>Export TMX</Link>
