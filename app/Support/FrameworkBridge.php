@@ -4,17 +4,18 @@ namespace App\Support;
 
 use App\Models\Glossary;
 use App\Models\TranslationMemory;
-use CatFramework\Filter\Docx\DocxFilter;
-use CatFramework\Filter\Html\HtmlFilter;
-use CatFramework\Filter\Plaintext\PlaintextFilter;
-use CatFramework\Filter\Po\PoFilter;
-use CatFramework\Filter\Pptx\PptxFilter;
-use CatFramework\Filter\Xlsx\XlsxFilter;
-use CatFramework\Filter\Xml\XmlFilter;
+use App\Support\Filters\DocxFilter;
+use App\Support\Filters\HtmlFilter;
+use App\Support\Filters\PlaintextFilter;
+use App\Support\Filters\PoFilter;
+use App\Support\Filters\PptxFilter;
+use App\Support\Filters\SegmentationEngine;
+use App\Support\Filters\XliffFilter;
+use App\Support\Filters\XlsxFilter;
+use App\Support\Filters\XmlFilter;
 use CatFramework\Mt\AzureTranslatorAdapter;
 use CatFramework\Mt\DeepLAdapter;
 use CatFramework\Mt\GoogleTranslateAdapter;
-use CatFramework\Segmentation\SrxSegmentationEngine;
 use CatFramework\Terminology\SqliteTerminologyProvider;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +35,7 @@ class FrameworkBridge
             'xlsx' => new XlsxFilter,
             'txt' => new PlaintextFilter,
             'po', 'pot' => new PoFilter,
+            'xliff', 'xlf' => new XliffFilter,
             'xml' => new XmlFilter,
             default => throw new \InvalidArgumentException("Unsupported format: {$format}"),
         };
@@ -41,9 +43,7 @@ class FrameworkBridge
 
     public function makeSegmentationEngine(): mixed
     {
-        $srxFile = config('catframework.segmentation.srx_file');
-
-        return new SrxSegmentationEngine($srxFile);
+        return new SegmentationEngine;
     }
 
     public function makeTmProvider(TranslationMemory $tm): mixed
