@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\ProjectFile;
 use App\Models\Segment;
+use App\Support\Filters\FilterDocument;
+use App\Support\Filters\FilterSegmentPair;
 use Illuminate\Support\Facades\DB;
 
 class EditorService
@@ -49,15 +51,15 @@ class EditorService
     }
 
     /**
-     * Reconstruct a BilingualDocument from stored segments — used by ExportService and QA jobs.
+     * Reconstruct a FilterDocument from stored segments — used by ExportService and QA jobs.
      */
-    public function hydrateDocument(ProjectFile $file): mixed
+    public function hydrateDocument(ProjectFile $file): FilterDocument
     {
         $segments = $file->segments()->get();
-        $document = new \CatFramework\Core\BilingualDocument();
+        $document = new FilterDocument;
 
         foreach ($segments as $seg) {
-            $pair = new \CatFramework\Core\SegmentPair(
+            $pair = new FilterSegmentPair(
                 $seg->source_text,
                 $seg->target_text ?? '',
                 $seg->source_tags ?? [],
