@@ -227,8 +227,8 @@ Lint PHP: `"C:/Users/shaik/.config/herd/bin/php84/php.exe" vendor/bin/pint --dir
 
 ## Framework packages
 
-catframework/* packages are symlinked via Composer path repositories to `../cat-framework/packages/*`.
-Do not `composer require catframework/*` — they are already wired in `composer.json`.
+opencat/* packages are symlinked via Composer path repositories to `../opencat-framework/packages/*`.
+Do not `composer require opencat/*` — they are already wired in `composer.json`.
 
 ## Database
 
