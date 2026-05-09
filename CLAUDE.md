@@ -225,6 +225,10 @@ Run artisan: `"C:/Users/shaik/.config/herd/bin/php84/php.exe" artisan <command>`
 Run tests: `"C:/Users/shaik/.config/herd/bin/php84/php.exe" artisan test --compact`
 Lint PHP: `"C:/Users/shaik/.config/herd/bin/php84/php.exe" vendor/bin/pint --dirty`
 
+## Skills
+
+- `opencat-versioning-check` — MUST activate before every `git push` or `gh pr create` in this repo. Verifies all `opencat/*` dependencies use `^0.1` (not `*`), and that a breaking change bumps all packages together.
+
 ## Framework packages
 
 opencat/* packages are symlinked via Composer path repositories to `../opencat-framework/packages/*`.
